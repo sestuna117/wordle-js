@@ -1,0 +1,1 @@
+# This is a Wordle clone made using Vanilla JS.
