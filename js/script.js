@@ -7,12 +7,32 @@ const MAX_GUESSES = 6;
 const LETTER_COUNT = 5;
 
 let originalWord = "wordle";
+let originalWordLetterMap = new Map();
 let currentGuessRow = 0;
 
+const generateMapFromWord = (word) => {
+  const letterMap = new Map();
+
+  for (let i = 0; i < word.length; i++) {
+    const char = word[i];
+
+    if (!letterMap.has(char)) {
+      letterMap.set(char, []);
+    }
+
+    const entry = letterMap.get(char);
+    entry.push(i);
+  }
+
+  return letterMap;
+};
+
+// generates a random 5 char word and create a map of each letters count and index
 const generateWord = () => {
   let randomIndex = Math.floor(Math.random() * data.length);
 
-  return data[randomIndex];
+  originalWord = data[randomIndex];
+  originalWordLetterMap = generateMapFromWord(originalWord);
 };
 
 const initializeBoard = () => {
@@ -34,7 +54,7 @@ const initializeBoard = () => {
 
 const initializeGame = () => {
   // generate a word
-  originalWord = generateWord();
+  generateWord();
   // seperate word into map of letters which index and counts
   // initialize the guessing matrix
   initializeBoard();
@@ -44,28 +64,60 @@ const generateCurrentIndexRegex = () => {
   return new RegExp(`${currentGuessRow}-`, "gi");
 };
 
-const checkGuess = () => {
-  // get original word
-  console.log("checking guess");
-  // convert guess into map
-  let inputs = document.querySelectorAll("#game-board > * > [id]");
+function getLetterByIndex(charMap, index) {
+  for (let [letter, indices] of charMap.entries()) {
+    if (indices.includes(index)) {
+      return letter;
+    }
+  }
+  return undefined;
+}
 
+const checkGuess = () => {
+  let inputs = document.querySelectorAll("#game-board > * > [id]");
   let regex = generateCurrentIndexRegex();
   const currentGuessInputs = [...inputs].filter((input) =>
     input.id.match(regex),
   );
-  console.log(currentGuessInputs);
   const currentGuessStr = currentGuessInputs
     .map((input) => input.value)
     .join("")
     .toLowerCase();
-  console.log(currentGuessStr);
 
-  // compare original map with guess map
-  // mark differences if they exist
-  // disable current row, enable new row
+  const currentGuessLetterMap = generateMapFromWord(currentGuessStr);
+  const originalLetterMapCopy = structuredClone(originalWordLetterMap);
   for (let i = 0; i < currentGuessInputs.length; i++) {
     currentGuessInputs[i].disabled = true;
+    const guessChar = getLetterByIndex(currentGuessLetterMap, i);
+    const originalChar = getLetterByIndex(originalLetterMapCopy, i);
+
+    if (guessChar === originalChar) {
+      currentGuessInputs[i].className = "letter--correct";
+      let newGuessIndices = currentGuessLetterMap
+        .get(guessChar)
+        .filter((index) => index !== i);
+      let newOrigIndices = originalLetterMapCopy
+        .get(originalChar)
+        .filter((index) => index !== i);
+      // remove chars from maps to help account for when there are duplicate
+      // letters need to be check that have already been accounted for
+      if (newGuessIndices.length === 0) {
+        currentGuessLetterMap.delete(guessChar);
+      } else {
+        currentGuessLetterMap.set(guessChar, newGuessIndices);
+      }
+      if (newOrigIndices.length === 0) {
+        originalLetterMapCopy.delete(originalChar);
+      } else {
+        originalLetterMapCopy.set(originalChar, newOrigIndices);
+      }
+    } else {
+      if (originalLetterMapCopy.has(guessChar)) {
+        currentGuessInputs[i].className = "letter--contains";
+      } else {
+        currentGuessInputs[i].className = "letter--incorrect";
+      }
+    }
   }
 
   if (currentGuessStr === originalWord) {
@@ -92,7 +144,6 @@ const checkGuess = () => {
 
 function charInput() {
   const inputs = document.querySelectorAll("#game-board > * > [id]");
-  console.log(inputs);
   for (let i = 0; i < inputs.length; i++) {
     // event listener to move to next field based on input value and index
     inputs[i].addEventListener("keydown", function (event) {
@@ -116,4 +167,4 @@ function charInput() {
 
 initializeGame();
 charInput();
-console.log(originalWord);
+console.log("Answer:", originalWord);
