@@ -7,7 +7,7 @@ const MAX_GUESSES = 6;
 const LETTER_COUNT = 5;
 
 let originalWord = "wordle";
-let currentGuessIndex = 0;
+let currentGuessRow = 0;
 
 const generateWord = () => {
   let randomIndex = Math.floor(Math.random() * data.length);
@@ -41,7 +41,7 @@ const initializeGame = () => {
 };
 
 const generateCurrentIndexRegex = () => {
-  return new RegExp(`${currentGuessIndex}-`, "gi");
+  return new RegExp(`${currentGuessRow}-`, "gi");
 };
 
 const checkGuess = () => {
@@ -61,19 +61,23 @@ const checkGuess = () => {
     .toLowerCase();
   console.log(currentGuessStr);
 
-  if (currentGuessStr === originalWord) {
-    alert("you guessed the word!");
-  }
   // compare original map with guess map
   // mark differences if they exist
   // disable current row, enable new row
   for (let i = 0; i < currentGuessInputs.length; i++) {
     currentGuessInputs[i].disabled = true;
   }
-  currentGuessIndex++;
 
-  if (currentGuessIndex >= MAX_GUESSES) {
+  if (currentGuessStr === originalWord) {
+    alert("you guessed the word!");
+    return;
+  }
+
+  currentGuessRow++;
+
+  if (currentGuessRow >= MAX_GUESSES) {
     alert("you've run out of guesses");
+    return;
   }
 
   regex = generateCurrentIndexRegex();
@@ -91,7 +95,8 @@ function charInput() {
   console.log(inputs);
   for (let i = 0; i < inputs.length; i++) {
     // event listener to move to next field based on input value and index
-    inputs[i].addEventListener("keyup", function (event) {
+    inputs[i].addEventListener("keydown", function (event) {
+      event.preventDefault();
       if (
         event.key === "Enter" &&
         (i + 1) % 5 === 0 &&
@@ -101,14 +106,9 @@ function charInput() {
       } else if (event.key === "Backspace") {
         inputs[i].value = "";
         if (i !== 0) inputs[i - 1].focus();
-      } else {
-        if (event.target.value.match(/[a-z]/gi)) {
-          inputs[i].value = String.fromCharCode(event.keyCode);
-          if ((i + 1) % 5 !== 0) inputs[i + 1].focus();
-          event.preventDefault();
-        } else {
-          inputs[i].value = "";
-        }
+      } else if (event.key.match(/^[a-z]$/i)) {
+        inputs[i].value = event.key;
+        if ((i + 1) % 5 !== 0) inputs[i + 1].focus();
       }
     });
   }
